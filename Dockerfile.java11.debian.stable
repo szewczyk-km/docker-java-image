@@ -1,0 +1,28 @@
+FROM debian:stable as java11-builder
+
+RUN apt update -qq &&\
+    apt install wget -y	
+
+RUN wget https://download.java.net/java/GA/jdk11/13/GPL/openjdk-11.0.1_linux-x64_bin.tar.gz -P /srv &&\
+    mkdir /srv/jdk &&\
+    tar -xvvf /srv/openjdk-11.0.1_linux-x64_bin.tar.gz --strip-components=1 -C /srv/jdk
+
+ENV PATH $PATH:/srv/jdk/bin
+
+RUN jlink --module-path /srv/jdk/jmods \
+	--compress=2 \
+    	--add-modules jdk.jfr,jdk.management.agent,java.base,java.logging,java.xml,jdk.unsupported,java.sql,java.naming,java.desktop,java.management,java.security.jgss,java.instrument \
+    	--no-header-files \
+    	--no-man-pages \
+	--output /srv/jre
+
+FROM debian:stable-slim
+MAINTAINER "Krzysztof Szewczyk"
+
+COPY --from=java11-builder /srv/jre /usr/share/java
+
+ENV PATH $PATH:/usr/share/java/bin
+ENV JAVA_HOME /usr/share/java
+
+CMD ["java","-version"]
+	
